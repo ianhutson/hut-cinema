@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hut Cinema — sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#221b2e; --surface:#2c2440; --surface-2:#362c4e; --ink:#f2ebdd; --ink-dim:#9c92b3; --amber:#e9b44c; --red:#d4574e; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--ink); font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    padding: 20px;
+  }
+  .box {
+    width: 100%; max-width: 380px; text-align: center;
+    border: 3px double var(--amber); border-radius: 14px;
+    background: var(--surface); padding: 28px 22px 24px;
+  }
+  h1 { margin: 0 0 4px; font-size: 30px; font-weight: 800; color: var(--amber); letter-spacing: .5px; }
+  p { margin: 0 0 18px; color: var(--ink-dim); font-size: 14px; }
+  input {
+    width: 100%; font: inherit; font-size: 16px; padding: 12px 14px;
+    border-radius: 10px; border: 1px solid var(--surface-2);
+    background: var(--bg); color: var(--ink); margin-bottom: 12px;
+  }
+  input:focus-visible { outline: 2px solid var(--amber); border-color: var(--amber); }
+  button {
+    width: 100%; font: inherit; font-weight: 600; font-size: 16px; padding: 12px 0;
+    border: 0; border-radius: 10px; background: var(--amber); color: #2a2117; cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .err { color: var(--red); font-size: 14px; min-height: 20px; margin: 10px 0 0; }
+</style>
+</head>
+<body>
+  <form class="box" id="f">
+    <h1>Hut Cinema</h1>
+    <p>Enter the house password to open the shelf.</p>
+    <input id="pw" type="password" placeholder="Password" autocomplete="current-password" autofocus />
+    <button type="submit">Come on in</button>
+    <div class="err" id="err"></div>
+  </form>
+<script>
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err");
+  err.textContent = "";
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: document.getElementById("pw").value }),
+  });
+  if (res.ok) { location.reload(); return; }
+  const data = await res.json().catch(() => ({}));
+  err.textContent = data.error || "Sign-in failed.";
+});
+</script>
+</body>
+</html>

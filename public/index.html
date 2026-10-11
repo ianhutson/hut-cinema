@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hut Cinema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #221b2e;
+    --surface: #2c2440;
+    --surface-2: #362c4e;
+    --ink: #f2ebdd;
+    --ink-dim: #9c92b3;
+    --amber: #e9b44c;
+    --red: #d4574e;
+    --green: #7dbb7a;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    min-height: 100dvh;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 96px; }
+
+  header.marquee {
+    border: 3px double var(--amber);
+    border-radius: 14px;
+    padding: 18px 20px 16px;
+    text-align: center;
+    background:
+      radial-gradient(circle at 8px 8px, var(--amber) 1.6px, transparent 2px),
+      radial-gradient(circle at 8px 8px, var(--amber) 1.6px, transparent 2px),
+      var(--surface);
+    background-size: 24px 8px, 24px 8px;
+    background-position: 6px 4px, 6px calc(100% - 10px);
+    background-repeat: repeat-x;
+  }
+  header.marquee h1 {
+    margin: 6px 0 2px;
+    font-size: clamp(26px, 6vw, 38px);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--amber);
+  }
+  header.marquee p { margin: 0; color: var(--ink-dim); font-size: 14px; }
+
+  nav.tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 18px 0 14px;
+    background: var(--surface); padding: 6px; border-radius: var(--radius);
+  }
+  nav.tabs button {
+    font: inherit; font-weight: 600; font-size: 16px;
+    padding: 10px 0; border: 0; border-radius: 7px;
+    background: transparent; color: var(--ink-dim); cursor: pointer;
+  }
+  nav.tabs button.active { background: var(--amber); color: #2a2117; }
+  nav.tabs button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .search-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .search-row input {
+    flex: 1; font: inherit; font-size: 16px;
+    padding: 12px 14px; border-radius: var(--radius);
+    border: 1px solid var(--surface-2); background: var(--surface); color: var(--ink);
+  }
+  .search-row input::placeholder { color: var(--ink-dim); }
+  .search-row input:focus-visible { outline: 2px solid var(--amber); border-color: var(--amber); }
+
+  .grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .card {
+    background: var(--surface); border-radius: var(--radius); overflow: hidden;
+    display: flex; flex-direction: column;
+    border: 1px solid transparent;
+  }
+  .card .poster {
+    aspect-ratio: 2/3; width: 100%; object-fit: cover; display: block;
+    background: var(--surface-2);
+  }
+  .card .noposter {
+    aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center;
+    background: var(--surface-2); color: var(--ink-dim); font-size: 13px; padding: 10px; text-align: center;
+  }
+  .card .meta { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card .title { font-weight: 600; font-size: 14px; line-height: 1.25; }
+  .card .year { color: var(--ink-dim); font-size: 13px; }
+  .card button {
+    font: inherit; font-weight: 600; font-size: 14px;
+    margin-top: auto; padding: 8px 0; border: 0; border-radius: 7px; cursor: pointer;
+  }
+  .card button.add { background: var(--amber); color: #2a2117; }
+  .card button.remove { background: transparent; color: var(--red); border: 1px solid var(--red); }
+  .card button.in-library { background: var(--surface-2); color: var(--ink-dim); cursor: default; }
+  .card button.on-the-way {
+    background: transparent; color: var(--amber);
+    border: 1px dashed var(--amber); cursor: default; opacity: 0.85;
+  }
+  .card button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .card { position: relative; }
+  .card .xmark {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(34, 27, 46, 0.72); pointer-events: none;
+  }
+  .card.removed .xmark { display: flex; }
+  .card .xmark svg { width: 56%; height: auto; }
+  .card.removed .poster, .card.removed .noposter { filter: grayscale(1) brightness(0.7); }
+  .card button.undo { background: var(--amber); color: #2a2117; }
+
+  .section-title { font-size: 15px; color: var(--ink-dim); margin: 22px 0 10px; font-weight: 600; }
+
+  .removed-list { display: flex; flex-direction: column; gap: 8px; }
+  .removed-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface); border-radius: var(--radius); padding: 10px 12px;
+  }
+  .removed-row .name { font-weight: 600; font-size: 14px; }
+  .removed-row .name span { color: var(--ink-dim); font-weight: 400; }
+  .removed-row button {
+    font: inherit; font-weight: 600; font-size: 13px;
+    padding: 7px 12px; border-radius: 7px; border: 1px solid var(--green);
+    background: transparent; color: var(--green); cursor: pointer; white-space: nowrap;
+  }
+
+  .empty { color: var(--ink-dim); text-align: center; padding: 30px 10px; font-size: 15px; }
+
+  /* Confirm sheet */
+  .sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 10, 22, 0.65);
+    display: none; align-items: flex-end; justify-content: center; z-index: 20;
+  }
+  .sheet-backdrop.open { display: flex; }
+  .sheet {
+    background: var(--surface); border-radius: 16px 16px 0 0;
+    padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    width: 100%; max-width: 560px;
+  }
+  .sheet h2 { margin: 0 0 6px; font-size: 19px; }
+  .sheet p { margin: 0 0 16px; color: var(--ink-dim); font-size: 14px; line-height: 1.45; }
+  .sheet .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sheet .actions button {
+    font: inherit; font-weight: 600; font-size: 16px; padding: 12px 0;
+    border-radius: var(--radius); border: 0; cursor: pointer;
+  }
+  .sheet .cancel { background: var(--surface-2); color: var(--ink); }
+  .sheet .confirm { background: var(--red); color: #fff; }
+
+  /* Toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(80px);
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--amber);
+    padding: 12px 16px; border-radius: var(--radius); font-size: 14px;
+    display: flex; gap: 14px; align-items: center;
+    transition: transform 0.25s ease; z-index: 30; max-width: 92vw;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast button {
+    font: inherit; font-weight: 600; border: 0; background: transparent;
+    color: var(--amber); cursor: pointer; padding: 0;
+  }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  .loading { color: var(--ink-dim); text-align: center; padding: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="marquee">
+    <h1>Hut Cinema</h1>
+    <p>Add movies to the shelf, or take them off it.</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button id="tab-add" class="active" role="tab" aria-selected="true">Add</button>
+    <button id="tab-remove" role="tab" aria-selected="false">Remove</button>
+  </nav>
+
+  <section id="panel-add">
+    <div class="search-row">
+      <input id="search" type="search" placeholder="Search for a movie…" autocomplete="off" />
+    </div>
+    <div id="search-results" class="grid"></div>
+    <div id="search-hint" class="empty">Type a title to look for a movie.</div>
+  </section>
+
+  <section id="panel-remove" hidden>
+    <div class="search-row">
+      <input id="filter" type="search" placeholder="Filter the library…" autocomplete="off" />
+    </div>
+    <div id="library" class="grid"></div>
+    <div id="library-empty" class="empty" hidden>Nothing on the shelf yet.</div>
+
+    <div class="section-title">Recently removed</div>
+    <div id="removed" class="removed-list"></div>
+    <div id="removed-empty" class="empty" hidden>Nothing removed lately.</div>
+  </section>
+</div>
+
+<div class="sheet-backdrop" id="sheet-backdrop">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h2 id="sheet-title">Remove this movie?</h2>
+    <p id="sheet-text">It leaves the shelf now and is deleted for good in about 12 hours. Undo any time before then and nothing is lost.</p>
+    <div class="actions">
+      <button class="cancel" id="sheet-cancel">Keep it</button>
+      <button class="confirm" id="sheet-confirm">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-text"></span><button id="toast-action" hidden></button></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let library = [];
+
+let toastTimer = null;
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function toast(text, actionLabel, actionFn) {
+  const t = $("toast"), a = $("toast-action");
+  $("toast-text").textContent = text;
+  if (actionLabel) {
+    a.hidden = false; a.textContent = actionLabel;
+    a.onclick = () => { hideToast(); actionFn(); };
+  } else { a.hidden = true; a.onclick = null; }
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { $("toast").classList.remove("show"); }
+
+function movieCard(m, mode) {
+  const card = document.createElement("div");
+  card.className = "card" + (m.pendingRemoval ? " removed" : "");
+  card.innerHTML = m.poster
+    ? `<img class="poster" loading="lazy" src="${m.poster}" alt="">`
+    : `<div class="noposter">${m.title}</div>`;
+  const x = document.createElement("div");
+  x.className = "xmark";
+  x.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M20 20 L80 80 M80 20 L20 80" stroke="#d4574e" stroke-width="14" stroke-linecap="round" fill="none"/></svg>`;
+  card.appendChild(x);
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  const wayNote = mode === "remove" && m.inLibrary && !m.hasFile ? ` · <span style="color:var(--amber)">on the way</span>` : "";
+  meta.innerHTML = `<div class="title">${m.title}</div><div class="year">${m.year || ""}${wayNote}</div>`;
+  const btn = document.createElement("button");
+  if (mode === "add") {
+    if (m.inLibrary && m.hasFile) { btn.textContent = "On the shelf"; btn.className = "in-library"; btn.disabled = true; }
+    else if (m.inLibrary) { btn.textContent = "On the way…"; btn.className = "on-the-way"; btn.disabled = true; }
+    else { btn.textContent = m.excluded ? "Add back" : "Add"; btn.className = "add"; btn.onclick = () => addMovie(m, btn); }
+  } else if (m.pendingRemoval) {
+    btn.textContent = "Undo"; btn.className = "undo";
+    btn.onclick = () => undoRemoval(m, card, btn);
+  } else {
+    btn.textContent = "Remove"; btn.className = "remove";
+    btn.onclick = () => openSheet(m, card, btn);
+  }
+  meta.appendChild(btn);
+  card.appendChild(meta);
+  return card;
+}
+
+// Optimistic state flips — the tile changes instantly, the server call runs behind it
+function markRemoved(m, card, btn) {
+  m.pendingRemoval = true;
+  card.classList.add("removed");
+  btn.textContent = "Undo"; btn.className = "undo";
+  btn.onclick = () => undoRemoval(m, card, btn);
+}
+function markKept(m, card, btn) {
+  m.pendingRemoval = false;
+  card.classList.remove("removed");
+  btn.textContent = "Remove"; btn.className = "remove";
+  btn.onclick = () => openSheet(m, card, btn);
+}
+async function undoRemoval(m, card, btn) {
+  markKept(m, card, btn); // flip back instantly
+  try {
+    await api("/api/undo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movieId: m.id }),
+    });
+    toast(`${m.title} is staying.`);
+  } catch (e) {
+    markRemoved(m, card, btn); // revert if the server disagrees
+    toast(`Couldn't undo: ${e.message}`);
+  }
+}
+
+/* ---- Add tab ---- */
+let searchTimer = null;
+$("search").addEventListener("input", (e) => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q) { $("search-results").innerHTML = ""; $("search-hint").hidden = false; return; }
+  searchTimer = setTimeout(() => runSearch(q), 350);
+});
+
+async function runSearch(q) {
+  $("search-hint").hidden = true;
+  $("search-results").innerHTML = `<div class="loading">Searching…</div>`;
+  try {
+    const results = await api(`/api/search?q=${encodeURIComponent(q)}`);
+    const grid = $("search-results");
+    grid.innerHTML = "";
+    if (!results.length) { grid.innerHTML = `<div class="empty">No matches for that title.</div>`; return; }
+    results.forEach((m) => grid.appendChild(movieCard(m, "add")));
+  } catch (e) {
+    $("search-results").innerHTML = `<div class="empty">Search failed: ${e.message}</div>`;
+  }
+}
+
+async function addMovie(m, btn) {
+  btn.disabled = true; btn.textContent = "Adding…";
+  try {
+    await api("/api/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tmdbId: m.tmdbId }),
+    });
+    btn.textContent = "On the way…"; btn.className = "on-the-way";
+    toast(`${m.title} added — the Hut is looking for it now.`);
+    refreshRemoveTab();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Add";
+    toast(`Couldn't add ${m.title}: ${e.message}`);
+  }
+}
+
+/* ---- Remove tab ---- */
+function renderLibrary() {
+  const q = $("filter").value.trim().toLowerCase();
+  const grid = $("library");
+  grid.innerHTML = "";
+  const shown = library.filter((m) => !q || m.title.toLowerCase().includes(q));
+  $("library-empty").hidden = shown.length > 0;
+  shown.forEach((m) => grid.appendChild(movieCard(m, "remove")));
+}
+$("filter").addEventListener("input", renderLibrary);
+
+async function refreshRemoveTab() {
+  try {
+    const [lib, removedData] = await Promise.all([api("/api/library"), api("/api/removed")]);
+    library = lib;
+    renderLibrary();
+    const list = $("removed");
+    list.innerHTML = "";
+    const pending = removedData.pending || [];
+    const removed = removedData.removed || [];
+    $("removed-empty").hidden = pending.length + removed.length > 0;
+    pending.forEach((p) => {
+      const hrs = Math.max(1, Math.round((p.deleteAt - Date.now()) / 3600000));
+      const row = document.createElement("div");
+      row.className = "removed-row";
+      row.innerHTML = `<div class="name">${p.title} <span>${p.year || ""} · deletes in ~${hrs}h</span></div>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Undo";
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await api("/api/undo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ movieId: p.movieId }) });
+          toast(`${p.title} is staying.`);
+          refreshRemoveTab();
+        } catch (e) { btn.disabled = false; toast(`Couldn't undo: ${e.message}`); }
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+    removed.slice(0, 20).forEach((r) => {
+      const row = document.createElement("div");
+      row.className = "removed-row";
+      row.innerHTML = `<div class="name">${r.title} <span>${r.year || ""}</span></div>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Add back";
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = "Adding…";
+        try {
+          await api("/api/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tmdbId: r.tmdbId }),
+          });
+          toast(`${r.title} is back on the shelf.`);
+          refreshRemoveTab();
+        } catch (e) {
+          btn.disabled = false; btn.textContent = "Add back";
+          toast(`Couldn't add back: ${e.message}`);
+        }
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  } catch (e) {
+    $("library").innerHTML = `<div class="empty">Couldn't reach the Hut: ${e.message}</div>`;
+  }
+}
+
+/* ---- Confirm sheet ---- */
+let sheetCtx = null;
+function openSheet(m, card, btn) {
+  sheetCtx = { m, card, btn };
+  $("sheet-title").textContent = `Remove “${m.title}”?`;
+  $("sheet-backdrop").classList.add("open");
+}
+function closeSheet() { $("sheet-backdrop").classList.remove("open"); sheetCtx = null; }
+$("sheet-cancel").onclick = closeSheet;
+$("sheet-backdrop").addEventListener("click", (e) => { if (e.target === $("sheet-backdrop")) closeSheet(); });
+$("sheet-confirm").onclick = () => {
+  if (!sheetCtx) return;
+  const { m, card, btn } = sheetCtx;
+  closeSheet();
+  markRemoved(m, card, btn); // instant
+  api(`/api/movie/${m.id}`, { method: "DELETE" })
+    .then(() => toast(`${m.title} will be deleted in ~12h. Undo any time before then.`))
+    .catch((e) => { markKept(m, card, btn); toast(`Couldn't remove: ${e.message}`); });
+};
+
+/* ---- Tabs ---- */
+function showTab(name) {
+  const add = name === "add";
+  $("panel-add").hidden = !add;
+  $("panel-remove").hidden = add;
+  $("tab-add").classList.toggle("active", add);
+  $("tab-remove").classList.toggle("active", !add);
+  $("tab-add").setAttribute("aria-selected", add);
+  $("tab-remove").setAttribute("aria-selected", !add);
+  if (!add) refreshRemoveTab();
+}
+$("tab-add").onclick = () => showTab("add");
+$("tab-remove").onclick = () => showTab("remove");
+
+refreshRemoveTab(); // warm the library in the background
+</script>
+</body>
+</html>
