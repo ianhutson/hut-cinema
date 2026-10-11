@@ -147,6 +147,21 @@ async function bestRootFolder() {
   return folders[0].path; // the one with the most free space
 }
 
+// Every movie added through Hut Cinema gets this Radarr tag, so the
+// Letterboxd sync (which removes anything not on a watchlist) leaves it alone.
+const KEEP_TAG = (process.env.RADARR_KEEP_TAG || "keep").toLowerCase();
+let keepTagId = null;
+async function getKeepTagId() {
+  if (keepTagId) return keepTagId;
+  const tags = await radarr("GET", "/tag");
+  const existing = tags.find((t) => (t.label || "").toLowerCase() === KEEP_TAG);
+  keepTagId = existing ? existing.id : (await radarr("POST", "/tag", { label: KEEP_TAG })).id;
+  return keepTagId;
+}
+function withTag(tags, id) {
+  return [...new Set([...(tags || []), id])];
+}
+
 // The library, with pending-removal state merged in
 app.get("/api/library", async (_req, res) => {
   try {
@@ -222,13 +237,24 @@ app.post("/api/add", async (req, res) => {
     if (excl) await radarr("DELETE", `/exclusions/${excl.id}`);
 
     const found = await radarr("GET", `/movie/lookup/tmdb?tmdbId=${tmdbId}`);
-    if (found.id) return res.json({ ok: true, already: true, movie: slim(found) });
+    const tagId = await getKeepTagId();
+
+    if (found.id) {
+      // Already in Radarr (e.g. from a watchlist): tag it so it stays even if
+      // it later drops off every watchlist.
+      const movie = await radarr("GET", `/movie/${found.id}`);
+      if (!(movie.tags || []).includes(tagId)) {
+        await radarr("PUT", `/movie/${found.id}`, { ...movie, tags: withTag(movie.tags, tagId) });
+      }
+      return res.json({ ok: true, already: true, movie: slim(found) });
+    }
 
     const added = await radarr("POST", "/movie", {
       ...found,
       rootFolderPath: await bestRootFolder(),
       qualityProfileId: await getProfileId(),
       monitored: true,
+      tags: withTag(found.tags, tagId),
       addOptions: { searchForMovie: true },
     });
     res.json({ ok: true, movie: slim(added) });
