@@ -332,6 +332,6 @@ setInterval(processPending, 15 * 60 * 1000); // check every 15 minutes
 processPending().catch(() => {});
 
 app.listen(PORT, () => {
-    cleanup.start();
+  cleanup.start();
   console.log(`Hut Cinema listening on :${PORT}, talking to ${RADARR_URL}`);
 });
