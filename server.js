@@ -5,6 +5,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const cleanup = require("./cleanup");
 
 const RADARR_URL = (process.env.RADARR_URL || "").replace(/\/+$/, "");
 const RADARR_API_KEY = process.env.RADARR_API_KEY || "";
@@ -317,6 +318,7 @@ async function processPending() {
         ).catch(() => {});
       }
       // Delete the movie + files, block re-adding
+      await cleanup.purgeMovieDownloads(p.movieId);
       await radarr("DELETE", `/movie/${p.movieId}?deleteFiles=true&addImportExclusion=true`);
       pending = pending.filter((x) => x.movieId !== p.movieId);
       savePending(pending);
@@ -330,5 +332,6 @@ setInterval(processPending, 15 * 60 * 1000); // check every 15 minutes
 processPending().catch(() => {});
 
 app.listen(PORT, () => {
+    cleanup.start();
   console.log(`Hut Cinema listening on :${PORT}, talking to ${RADARR_URL}`);
 });
